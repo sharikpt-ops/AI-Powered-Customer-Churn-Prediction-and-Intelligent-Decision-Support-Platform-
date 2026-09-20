@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Analytics & SHAP | AI Churn Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar-custom {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        .progress-bar-ai {
+            background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%);
+        }
+        .text-mca-project { color: #22c55e; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+            <img src="{{ url_for('static', filename='AI_Robot.png') }}" style="height: 55px;" class="me-2" alt="Logo">
+            <span class="fw-bold fs-5">AI ChurnPlatform</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fa-solid fa-chart-pie me-1"></i> Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('batch_upload') }}"><i class="fa-solid fa-file-csv me-1"></i> Batch CSV Upload</a></li>
+                <li class="nav-item"><a class="nav-link active" href="{{ url_for('analytics') }}"><i class="fa-solid fa-brain me-1"></i> Model Analytics</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('rule_manager') }}"><i class="fa-solid fa-sliders me-1"></i> Rule Manager</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container my-5">
+    <div class="row g-4">
+        <!-- Model Metrics -->
+        <div class="col-lg-5">
+            <div class="glass-card p-4 h-100">
+                <h4 class="fw-bold mb-3"><i class="fa-solid fa-microchip text-info me-2"></i>Model Evaluation Metrics</h4>
+                <p class="text-white-50 small mb-4">Evaluated on Out-of-Time Test Split using Stratified 5-Fold Cross Validation.</p>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Accuracy Score</span>
+                        <span class="fw-bold text-info">{{ metrics.accuracy }}</span>
+                    </div>
+                    <div class="progress bg-dark" style="height: 8px;">
+                        <div class="progress-bar progress-bar-ai" style="width: 89.6%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Precision (Positive Class)</span>
+                        <span class="fw-bold text-success">{{ metrics.precision }}</span>
+                    </div>
+                    <div class="progress bg-dark" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: 87.2%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Recall (Churn Catch Rate)</span>
+                        <span class="fw-bold text-warning">{{ metrics.recall }}</span>
+                    </div>
+                    <div class="progress bg-dark" style="height: 8px;">
+                        <div class="progress-bar bg-warning" style="width: 85.4%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>ROC-AUC Score</span>
+                        <span class="fw-bold text-primary">{{ metrics.auc_score }}</span>
+                    </div>
+                    <div class="progress bg-dark" style="height: 8px;">
+                        <div class="progress-bar bg-primary" style="width: 91%"></div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top border-secondary">
+                    <span class="badge bg-secondary p-2 me-1"><i class="fa-solid fa-database me-1"></i> Train/Test: 80/20</span>
+                    <span class="badge bg-secondary p-2"><i class="fa-solid fa-layer-group me-1"></i> Algorithm: Random Forest</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SHAP Feature Importance -->
+        <div class="col-lg-7">
+            <div class="glass-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="fw-bold mb-0"><i class="fa-solid fa-chart-bar text-warning me-2"></i>SHAP Feature Importance Analysis</h4>
+                    <span class="badge bg-warning text-dark fw-bold">Explainable AI (XAI)</span>
+                </div>
+                <p class="text-white-50 small mb-4">Relative contribution of customer attributes to the overall churn classification risk.</p>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>1. Support Tickets Raised (Customer Dissatisfaction)</span>
+                        <span class="fw-bold">34.2%</span>
+                    </div>
+                    <div class="progress bg-dark" style="height: 12px;">
+                        <div class="progress-bar bg-danger" style="width: 34.2%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>2. Contract Plan Type (Month-to-Month vs Annual)</span>
+                        <span class="fw-bold">28.5%</span>
+                    </div>
+                    <div class="progress bg-dark" style="height: 12px;">
+                        <div class="progress-bar bg-warning" style="width: 28.5%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>3. Customer Tenure (Months Active)</span>
+                        <span class="fw-bold">18.1%</span>
+                    </div>
+                    <div class="progress bg-dark" style="height: 12px;">
+                        <div class="progress-bar bg-info" style="width: 18.1%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>4. Monthly Charges (Price Sensitivity)</span>
+                        <span class="fw-bold">12.8%</span>
+                    </div>
+                    <div class="progress bg-dark" style="height: 12px;">
+                        <div class="progress-bar bg-primary" style="width: 12.8%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>5. Total Charges (Cumulative Value)</span>
+                        <span class="fw-bold">6.4%</span>
+                    </div>
+                    <div class="progress bg-dark" style="height: 12px;">
+                        <div class="progress-bar bg-secondary" style="width: 6.4%"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="project-footer">
+    <div class="text-center mx-3 flex-grow-1">
+        <p class="mb-0 text-white">Presented by: | <strong>Abdul Sharik Abdul Hakim (MCA)</strong></p>
+        <p class="mb-0 text-info small">(Chandigarh University, Punjab) | <strong>O25MCA160448</strong></p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
